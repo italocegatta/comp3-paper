@@ -1,1 +1,1 @@
-comp3
+comp3-paper
