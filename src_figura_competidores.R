@@ -26,3 +26,4 @@ ggplot() +
   ) +
   theme_bw() +
   theme(legend.position = "bottom")
+
