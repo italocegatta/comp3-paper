@@ -23,6 +23,14 @@ preamble: >
 output: rticles::jss_article
 ---
 
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(comp3)
+
+theme_set(theme_bw(base_size = 11))
+#theme_set(theme_update(legend.position = "top"))
+```
+
 # Introdução
 
 A construção de modelos de crescimento é essencial para o planejamento florestal. Independente da abordagem do modelo, seja ele baseado em processo, empírico ou híbrido, o objetivo é representar o crescimento de árvores e povoamentos através de formulações matemáticas (BURKHART; TOMÉ, 2012).
@@ -55,29 +63,274 @@ Caso o banco de dados não possua a disposição espacial das árvore, mas se sa
 
 O exemplo abaixo exemplifica a criação de coordenadas para um conjunto de dados hipotéticos. Pretende-se criar as coordenadas x e y de 25 árvores que pertencem a uma parcela de 5 linhas por 5 plantas. A identificação de cada árvore é data pelo caminhamento em zig-zag pela parcela. As funções *xcoord* e *ycoord* criam as coordenadas locais a partir do identificador da árvore, podendo ele ser numérico ou textual. É preciso especificar o arranjo de plantio e o número de linhas que a parcela possui. Por fim, é definido o início do caminhamento, podendo ser escolhido um dos quatro vértices da parcela. 
 
-```{r, message=FALSE, dpi= 400}
+```{r, message=FALSE, fig.height=6, fig.width=8, dpi= 400}
 library(tidyverse)
 library(comp3)
 
-foo <- data_frame(id = paste0("arv.", 1:25)) %>% 
+foo <- data_frame(id = 1:25) %>% 
   mutate(
     x = xcoord(x = id, xspacing =  2, ncol =  5, star = "left-bottom"),
     y = ycoord(x = id, yspacing =  2, ncol =  5, star = "left-bottom")
-  )
+  ) 
 
-ggplot(foo, aes(x, y, label = id)) +
-  geom_text(show.legend = FALSE)
+foo %>% 
+  ggplot(aes(x, y, label = id)) +
+  geom_label(size = 4)
 ```
 
+Caso todas as árvores da parcela possuírem coordenadas, é possivel delimitar uma faixa de bordadura para garantir que as árvores estudadas estejam livres de influência externa.
+
+A função *avaliable_tree* retorna, a partir das coordenadas e do tamanho da bordadura, um vetor lógico que identifica as árvores úteis (TRUE) e de borda (FALSE).
+
+
+```{r, fig.height=6, fig.width=8, dpi= 400}
+foo %>% 
+  mutate(borda = available_tree(x = x, y = y, border = 2)) %>% 
+  ggplot(aes(x, y, label = id, color = borda)) +
+  geom_point(size = 4) +
+  labs(color = "`Árvore útil") +
+  scale_colour_manual(
+    values = c("FALSE" = "#d95f02", "Objeto" = "#7570b3", "TRUE" = "#1b9e77")
+  ) +
+  theme(legend.position	= "top")
+```
+
+## Árvores competidoras
+
+A determinação de uma árvore competidora ocorre somente nos índices de competição dependentes da distancia, uma vez que nos indices independentes da distância entende-se que todas as árvores da parcela contribui igualmente para o status competitivo do povoamento. O pacote fornece duas opções para a escolha do competidor, o primeiro delimita um raio de busca e seleciona todas as árvores que estão dentro desta faixa. A Figura 1 mostra 25 árvores hipotéticas, dispostas de maneira regular. A partir da árvore objeto, todas as árvores vizinhas que estiverem dentro do circulo com raio de 2,5 m são consideradas como competidoras. A determinação do raio de busca ou do número de arvores mais próximas é determinada pelo pesquisador e tem impacto relevante no cálculo dos índices dependentes da distância. O segundo estabelece um rank de distância entre as árvores-objeto e suas possíveis competidoras e seleciona o número de árvores de acordo com o parâmetro especificado na função. 
+
+```{r, echo=FALSE, fig.height=6, fig.width=8, dpi= 400}
+
+d1 <- data_frame(
+  x = xcoord(1:25, xspacing = 2, ncol = 5, start = "left-bottom"),
+  y = ycoord(1:25, yspacing = 2, ncol = 5, start = "left-bottom"),
+  z = available_tree(x, y, 2)
+)
+
+d2 <- data_frame(x = 4, y = 4)
+
+ggplot() +
+  geom_spoke(data = d2, aes(x, y, angle = 45, radius = 3), linetype = "dashed") +
+  geom_point(data = d1, aes(x, y, color = z), size = 4) +
+  geom_point(data = d2, aes(x, y, color = "Objeto"), size = 4) +
+  annotate(
+    "path",
+    x = 4+3*cos(seq(0,2*pi, length.out = 500)),
+    y = 4+3*sin(seq(0,2*pi, length.out = 500))
+  ) +
+  annotate("text", x = 5.2, y = 5, label = "2,5 m") +
+  labs(color = "Árvore", x = "x", y = "y") +
+  scale_colour_manual(
+    values = c("FALSE" = "#d95f02", "Objeto" = "#7570b3", "TRUE" = "#1b9e77"),
+    labels = c("Não competidora", "Objeto", "Competidora")
+  ) +
+  theme(legend.position = "top")
+
+
+```
+
+As funções dos índices dependentes da distância calculam através da função *search_nearest*  ,  internamente os competidores para cada árvore-objeto, de modo que a expressão de cálculo dos índices são aplicadas apenas a estas árvores. A função retorna, para cada árvore-objeto, seus competidores e a distâcnia entre os dois.
+
+```{r, echo=FALSE}
+#with(foo, search_nearest(id, x, y, 2))
+# Criar gráfico de redes em que cada node é uma árvore e os edges ligam os competidoes.
+
+```
 
 ## Índices de competição
 
 Foram implementados índices dependentes e independentes da distância. Cada índice, identificado com o nome do autor que o propôs, tem uma função própria e é calculado individualmente. Os índices independentes da distância necessitam obrigatoriamente do diâmetro das árvores e eventualmente da área da parcela amostral. Já os índices dependentes da distância exigem além do diâmetro, as coordenadas das árvores em um plano cartesiano, seja ele real ou hipotético, e do método que considera uma árvore vizinha como competidora.
 
-## selection of  competitors
+```{r, echo=FALSE}
+# Falta!!
+# 
+# colocar a tabela com nome do indice, fonte e expressão de cálculo.
+```
 
-Para determinar se uma árvore é competidora em relação à árvore-objeto, é necessário determinar ou o raio de busca que tem como centro a árvore-objeto, ou especificar as n árvores mais próximas que serão consideradas como competidoras. A Figura 1 mostra 25 árvores hipotéticas, dispostas de maneira regular. A partir da árvore objeto, todas as árvores vizinhas que estiverem dentro do circulo com raio de 2,5 m são consideradas como competidoras. A determinação do raio de busca ou do número de arvores mais próximas é determinada pelo pesquisador e tem impacto relevante no cálculo dos índices dependentes da distância.
+# Estudo de caso
 
-# Case study
+O pacote *comp3* diponibiliza um banco de dados com medições sucessivas de um plantio experimental de *Eucalyptus*. Trata-se de um plantio clonal, implantado em 4 locais diferentes com extremo rigor silvicultural. A parcela de medição possui 8 linhas por 10 plantas, com arranjo de plantio de 3 x 3 m e, onde foram mensuradas em todas as árvores o diâmetro a 1,3 m, altura total, altura do início da copa e atributos qualitativos. A drescição completa pode ser vista na descrição do banco de dados em  `?eucalyptus`. A Figura XX mostra o as médias das variáveis avaliadas em cada medição nos 4 sítios estudados.
+
+```{r, echo=FALSE}
+eucalyptus %>% 
+  group_by(site, area, age) %>% 
+  summarise_at(vars(dbh, h, cbh), mean, na.rm=TRUE) %>% 
+  mutate_at(vars(dbh, h, cbh), round, digits = 1) %>% 
+  knitr::kable(format = "latex")
+```
+
+Iniciando uma análise exploratória dos dados, podemos ver nas figuras ZZ o crescimento em área basal do clone nos 4 sítios. Pode-se notar que o crescimento a taxa de crescimento é semelhante entre os sítios, porém o patamar de produção de cada sítio se diferencia, podendo-se destacar o sítio 24 como o mais produtivo e o sítio 15 como o menos produtivo até os 50 meses de idade.
+
+```{r, echo=FALSE, fig.height=6, fig.width=8, dpi= 400}
+summary <- eucalyptus %>%
+  group_by(site, age) %>% 
+  mutate(
+    util = available_tree(x, y, 4),
+    g = pi * dbh^2 / 40000 * (10000 / area),
+    dead = cod1 %in% c(1,2)
+  ) %>% 
+  summarise(
+    dbh = mean(dbh, na.rm =TRUE),
+    g = sum(g, na.rm = TRUE),
+    surv = (length(tree) - sum(dead)) / length(tree) * 100 
+  )
+
+ggplot(summary, aes(age, g, color = site %>% factor, group = site)) +
+  geom_point() +
+  geom_line() +
+  labs(color = "Sítio", x = Idade~(meses), y = Área~basal~(m^2~ha^-1)) +
+  theme(legend.position = "top")
+```
+
+Iniciando processamento dos dados para o cálculo dos índices de competição, será preciso criar as coordenadas locais para as árvores do banco de dados, bem como criar uma faixa de bordadura equivalente a duas linhas de plantio e duas plantas, conforme indica a Figura QQ.
+
+```{r}
+base <- eucalyptus %>% 
+  group_by(site, age) %>% 
+  mutate(
+    x = xcoord(x = tree, xspacing =  3, ncol =  8, star = "left-bottom"),
+    y = ycoord(x = tree, yspacing =  3, ncol =  8, star = "left-bottom"),
+    available = available_tree(x, y, 6)
+  ) 
+```
+
+```{r, echo=FALSE, fig.height=6, fig.width=8, dpi= 400}
+base %>%
+  filter(site == 15, age == 14) %>% 
+  ggplot(aes(x, y, label = tree, color = available)) +
+    geom_point(size = 3) +
+    geom_label(show.legend = F) +
+    labs(color = "Árvore útil") +
+    scale_colour_manual(
+      values = c("FALSE" = "#d95f02", "Objeto" = "#7570b3", "TRUE" = "#1b9e77")
+    ) +
+    theme(legend.position = "top")
+    
+```
+
+O cálculo dos índices é aseguir, onde são computados 4 índices dependentes da distância e 6 índices independentes da distância. Para os índices dependentes da distancia foi padronizada seleção de competidores pelo crítério das 6 árvores mais próximas da árvore-objeto. Também foi calculado o incremento corrente da sessão transversal de cada árvore, com o objetivo de correlacioná-la com os índices de competição.
+
+```{r, echo=FALSE}
+base_index <- base %>%
+  group_by(site, age) %>% 
+  mutate(
+    #g = pi * dbh^2 / 40000,
+    daniels = dd_daniels(tree, x, y, dbh, search = "nearest", n = 6),
+    hegyi = dd_hegyi(tree, x, y, dbh, search = "nearest", n = 6),
+    alemdag = dd_alemdag(tree, x, y, dbh, search = "nearest", n = 6),
+    martin = dd_martin(tree, x, y, dbh, search = "nearest", n = 6),
+    corrona = di_corrona(dbh, area),
+    steneker = di_steneker(dbh, area),
+    vanclay = di_vanclay(dbh, area),
+    wikoff = di_wikoff(dbh, area),
+    hamilton = di_hamilton(dbh),
+    lorimer = di_lorimer(dbh)
+  ) %>%
+  arrange(site, tree, age) %>% 
+  group_by(site, tree) %>% 
+  mutate(cai = c(0, diff(dbh))) %>% 
+  ungroup()
+```
+
+A Figura WW apresenta um gráfico de dispensão do valor calculado para cada índice em função do incremento em sessão transversal.Alguns índices foram sensíveis às árvores dominadas e tiveram resultados que podem prejudicar a relação com o incremento da árvore. Entretando, nesta primeira etapa, estão incluídas todas as árvores úteis do banco de dados, podendo melhorar a visualização após a diferenciação por sítio e idade.
+
+```{r, echo=FALSE, fig.height=6, fig.width=8, dpi= 400}
+base_index_sml <- base_index %>%
+  filter(available == TRUE, cai > 0) %>% 
+  select(site, age, tree, dbh, cai, daniels:lorimer) %>%
+  gather(index, value, 6:15)
+
+base_index_sml %>% 
+  ggplot(aes(cai, value)) +
+    geom_point(alpha = 0.4) +
+    facet_wrap(~index, scales = "free") +
+    labs(x = ~Incremento~em~diâmetro, y = ~Valor)
+
+```
+
+A primeira análise quantitativa será feita atravéz da correlação simples de Pearson entre o incremento em sessão transversal e o índice de competição. A corelação será calculada para cada sitio e idade, para ferificar qual índice possui maior consistência de correlação em função da idade.
+
+```{r, echo=FALSE}
+library(corrr)
+
+base_corr <- base_index %>%
+  filter(available == TRUE, age > 17) %>% 
+  select(-c(area, available, x, y, tree, cod1)) %>%
+  group_by(site, age) %>%
+  nest() %>%
+  mutate(
+    corr = map(data, correlate),
+    corr_focus = map(corr, focus, cai)
+  ) %>% 
+  unnest(corr_focus) %>%
+  filter(!rowname %in% c("g", "dbh", "h", "cbh", "cai_dbh"))
+```
+
+O resultado das correlações estão apresentados na Figura RR. É possível notar que em determinadas idades, todos os índices tem baixa correlação com o incremento em diâmetro, com destaque para as medições referentes as idade 33 e 45 meses do sítio 24, onde nenhum índice obteve correlação maior que 0,5. 
+
+[buscar resultados de outros trabalhos para comparação]
+
+```{r, echo=FALSE, fig.height=6, fig.width=8, dpi= 400}
+base_corr %>% 
+  mutate(good = cut(cai, breaks = c(-1, -0.7, 0, 0.7, 1))) %>% 
+   #filter(good %in% c("(-1,-0.7]", "(0.7,1]")) %>% 
+  ggplot(aes(factor(age), reorder(rowname, cai), fill = cai)) +
+  geom_tile() +
+  facet_wrap(~site, scales = "free") +
+  labs(fill = ~Correlação, x = Idade~(meses), y = ~Índices) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "blue") +
+  theme(legend.position = "top")
 
 
+```
+
+```{r, eval=FALSE, include=FALSE}
+base_corr %>% 
+  mutate(good = cut(cai, breaks = c(-1, -0.6, 0, 0.6, 1))) %>%
+  filter(good %in% c("(-1,-0.6]", "(0.6,1]")) %>% 
+  group_by(rowname, good) %>% 
+  summarise(n = n()) %>% 
+  arrange(-n)
+```
+
+Será feito uma breve análise dos 4 índices que obtiveram melhores resultados em termos de correlação com o incremento.
+
+## 
+
+```{r,  fig.height=6, fig.width=8, dpi= 400}
+base_index_sml %>% 
+  filter(index == "steneker") %>% 
+  ggplot(aes(cai, value, color = age %>% factor)) +
+    geom_point(alpha = 0.4) +
+    facet_wrap(~site) +
+    labs(x = ~Incremento~em~diâmetro, y = ~Valor)
+```
+
+```{r,  fig.height=6, fig.width=8, dpi= 400}
+base_index_sml %>% 
+  filter(index == "alemdag") %>% 
+  ggplot(aes(cai, value, color = age %>% factor)) +
+    geom_point(alpha = 0.4) +
+    facet_wrap(~site) +
+    labs(x = ~Incremento~em~diâmetro, y = ~Valor)
+```
+
+```{r,  fig.height=6, fig.width=8, dpi= 400}
+base_index_sml %>% 
+  filter(index == "hamilton") %>% 
+  ggplot(aes(cai, value, color = age %>% factor)) +
+    geom_point(alpha = 0.4) +
+    facet_wrap(~site) +
+    labs(x = ~Incremento~em~diâmetro, y = ~Valor)
+```
+
+
+
+```{r,  fig.height=6, fig.width=8, dpi= 400}
+base_index_sml %>% 
+  filter(index == "daniels") %>% 
+  ggplot(aes(cai, value, color = age %>% factor)) +
+    geom_point(alpha = 0.4) +
+    facet_wrap(~site) +
+    labs(x = ~Incremento~em~diâmetro, y = ~Valor)
+```
