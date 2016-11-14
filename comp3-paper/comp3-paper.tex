@@ -96,18 +96,18 @@ relação a uma data árvore-objeto. (SOARES; TOMÉ, 1999; RIVAS et al.,
 \section{The comp3 package}\label{the-comp3-package}
 
 O software R é um ambiente computacional para desenvolvimento de
-análises estatísticas e gráficas (R CORE TEAM, 2016), a linguagem dispõe
-de várias funções para análises de dados e ainda possibilita utilizar
-funções disponíveis em pacotes criados por outros usuários. O CRAN,
-principal repositório de pacotes da linguagem R possui poucos pacotes
-direcionados para resolução de problemas da área florestal, com destaque
-para os pacotes \emph{FAwR} e \emph{lmfor}. O pacote \emph{comp3} foi
-desenvolvido com o objetivo de disponibilizar funções que facilitam o
-cálculo de índices de competição de árvores individuais de um povoamento
-florestal. Estão implementados os principais índices de competição tanto
-para florestas plantadas quanto para florestas naturais. A concepção das
-funções do pacote sugere um fluxo de trabalho para o calculo dos
-índices, que envolve:
+análises estatísticas e gráficas (R CORE TEAM, 2016). Esta linguagem
+dispõe de várias funções para análises de dados e ainda possibilita
+utilizar funções disponíveis em pacotes criados por outros usuários. O
+CRAN {[}identificar sigla{]}, principal repositório de pacotes da
+linguagem R possui poucos pacotes direcionados para resolução de
+problemas da área florestal, com destaque para os pacotes \emph{FAwR} e
+\emph{lmfor}. O pacote \emph{comp3} foi desenvolvido com o objetivo de
+disponibilizar funções que facilitam o cálculo de índices de competição
+de árvores individuais de um povoamento florestal. Estão implementados
+os principais índices de competição tanto para florestas plantadas
+quanto para florestas naturais. A concepção das funções do pacote sugere
+um fluxo de trabalho para o calculo dos índices, que envolve:
 
 \begin{itemize}
 \item
@@ -126,64 +126,48 @@ funções do pacote sugere um fluxo de trabalho para o calculo dos
 
 Caso o banco de dados não possua a disposição espacial das árvore, mas
 se sabe que as árvores da parcela amostral foram plantadas com extremo
-rigor e esquadrejamento, é possível criar um grid hipotético e assim
+rigor e esquadrejamento, é possível criar um grid de referencia e assim
 gerar coordenadas locais para as árvores da parcela.
 
-O exemplo abaixo exemplifica a criação de coordenadas para um conjunto
-de dados hipotéticos. Pretende-se criar as coordenadas x e y de 25
-árvores que pertencem a uma parcela de 5 linhas por 5 plantas. A
-identificação de cada árvore é data pelo caminhamento em zig-zag pela
-parcela. As funções \emph{xcoord} e \emph{ycoord} criam as coordenadas
-locais a partir do identificador da árvore, podendo ele ser numérico ou
-textual. É preciso especificar o arranjo de plantio e o número de linhas
-que a parcela possui. Por fim, é definido o início do caminhamento,
-podendo ser escolhido um dos quatro vértices da parcela.
+A Figura 1 exemplifica a criação de coordenadas para um conjunto de
+dados hipotéticos. Pretende-se criar as coordenadas x e y de 25 árvores
+que pertencem a uma parcela de 5 linhas por 5 plantas. A identificação
+de cada árvore é data pelo caminhamento em zig-zag. As funções
+\emph{xcoord} e \emph{ycoord} criam as coordenadas locais a partir do
+identificador da árvore, podendo ele ser numérico ou textual. É preciso
+especificar o arranjo de plantio e o número de linhas que a parcela
+possui. Por fim, é definido o início do caminhamento, podendo ser
+escolhido um dos quatro vértices da parcela.
 
 \begin{CodeChunk}
-\begin{CodeInput}
-library(tidyverse)
-library(comp3)
+\begin{figure}
 
-foo <- data_frame(id = 1:25) %>% 
-  mutate(
-    x = xcoord(x = id, xspacing =  2, ncol =  5, star = "left-bottom"),
-    y = ycoord(x = id, yspacing =  2, ncol =  5, star = "left-bottom")
-  ) 
+{\centering \includegraphics{comp3-paper_files/figure-latex/ex_coord-1} 
 
-foo %>% 
-  ggplot(aes(x, y, label = id)) +
-  geom_label(size = 4)
-\end{CodeInput}
+}
 
-
-\begin{center}\includegraphics{comp3-paper_files/figure-latex/unnamed-chunk-2-1} \end{center}
-
+\caption[Exemplo da construção de coordenadas locais para uma parcela amostral utilizando como referencia o caminhamento em zig-zag com início no vértice esquerdo inferior]{Exemplo da construção de coordenadas locais para uma parcela amostral utilizando como referencia o caminhamento em zig-zag com início no vértice esquerdo inferior.}\label{fig:ex_coord}
+\end{figure}
 \end{CodeChunk}
 
-Caso todas as árvores da parcela possuírem coordenadas, é possivel
-delimitar uma faixa de bordadura para garantir que as árvores estudadas
-estejam livres de influência externa.
-
-A função \emph{avaliable\_tree} retorna, a partir das coordenadas e do
-tamanho da bordadura, um vetor lógico que identifica as árvores úteis
-(TRUE) e de borda (FALSE).
+A identificação de árvores de borda é caracterizado como processo comum
+em experimentos agrícolas e florestais, pelo fato destas unidades
+amostrais sofrerem influência de meio externo à parcela de estudo. É
+possivel delimitar uma faixa de bordadura para garantir que as árvores
+estudadas estejam livres desta influência. A função
+\emph{avaliable\_tree} retorna, a partir das coordenadas e do tamanho da
+bordadura, um vetor lógico que identifica as árvores úteis (TRUE) e de
+borda (FALSE), como pode ser visto na Figura 2.
 
 \begin{CodeChunk}
-\begin{CodeInput}
-foo %>% 
-  mutate(borda = available_tree(x = x, y = y, border = 2)) %>% 
-  ggplot(aes(x, y, label = id, color = borda)) +
-  geom_point(size = 4) +
-  labs(color = "`Árvore útil") +
-  scale_colour_manual(
-    values = c("FALSE" = "#d95f02", "Objeto" = "#7570b3", "TRUE" = "#1b9e77")
-  ) +
-  theme(legend.position = "top")
-\end{CodeInput}
+\begin{figure}
 
+{\centering \includegraphics{comp3-paper_files/figure-latex/ex_borda-1} 
 
-\begin{center}\includegraphics{comp3-paper_files/figure-latex/unnamed-chunk-3-1} \end{center}
+}
 
+\caption[Identificação das árvores de bordadura baseada em uma faixa de 2 unidade de coordenada local]{Identificação das árvores de bordadura baseada em uma faixa de 2 unidade de coordenada local.}\label{fig:ex_borda}
+\end{figure}
 \end{CodeChunk}
 
 \subsection{Árvores competidoras}\label{arvores-competidoras}
@@ -194,28 +178,31 @@ independentes da distância entende-se que todas as árvores da parcela
 contribui igualmente para o status competitivo do povoamento. O pacote
 fornece duas opções para a escolha do competidor, o primeiro delimita um
 raio de busca e seleciona todas as árvores que estão dentro desta faixa.
-A Figura 1 mostra 25 árvores hipotéticas, dispostas de maneira regular.
+A Figura 3 mostra 25 árvores hipotéticas, dispostas de maneira regular.
 A partir da árvore objeto, todas as árvores vizinhas que estiverem
 dentro do circulo com raio de 2,5 m são consideradas como competidoras.
 A determinação do raio de busca ou do número de arvores mais próximas é
 determinada pelo pesquisador e tem impacto relevante no cálculo dos
-índices dependentes da distância. O segundo estabelece um rank de
-distância entre as árvores-objeto e suas possíveis competidoras e
-seleciona o número de árvores de acordo com o parâmetro especificado na
-função.
+índices dependentes da distância.
 
 \begin{CodeChunk}
+\begin{figure}
 
+{\centering \includegraphics{comp3-paper_files/figure-latex/ex_comp-1} 
 
-\begin{center}\includegraphics{comp3-paper_files/figure-latex/unnamed-chunk-4-1} \end{center}
+}
 
+\caption[Exemplo da seleção de competidores a partir de uma raio de busca definido]{Exemplo da seleção de competidores a partir de uma raio de busca definido.}\label{fig:ex_comp}
+\end{figure}
 \end{CodeChunk}
 
-As funções dos índices dependentes da distância calculam através da
-função \emph{search\_nearest} , internamente os competidores para cada
-árvore-objeto, de modo que a expressão de cálculo dos índices são
-aplicadas apenas a estas árvores. A função retorna, para cada
-árvore-objeto, seus competidores e a distâcnia entre os dois.
+O segundo método estabelece um rank de distância entre as árvores-objeto
+e suas possíveis competidoras através da função \emph{search\_nearest} e
+seleciona o número de árvores de acordo com o parâmetro especificado na
+função. Internamente, os dois métodos de seleção de competidores estão
+implementados nas funções dos índices dependentes da distância, dessa
+forma, após seleção dos competidores a expressão de cálculo de cada
+índice é aplicada somente para a árvore objeto e suas competidoras.
 
 \subsection{Índices de competição}\label{indices-de-competicao}
 
@@ -225,8 +212,7 @@ função própria e é calculado individualmente. Os índices independentes
 da distância necessitam obrigatoriamente do diâmetro das árvores e
 eventualmente da área da parcela amostral. Já os índices dependentes da
 distância exigem além do diâmetro, as coordenadas das árvores em um
-plano cartesiano, seja ele real ou hipotético, e do método que considera
-uma árvore vizinha como competidora.
+plano cartesiano e o método de seleção de competidores.
 
 \section{Estudo de caso}\label{estudo-de-caso}
 
@@ -234,96 +220,104 @@ O pacote \emph{comp3} diponibiliza um banco de dados com medições
 sucessivas de um plantio experimental de \emph{Eucalyptus}. Trata-se de
 um plantio clonal, implantado em 4 locais diferentes com extremo rigor
 silvicultural. A parcela de medição possui 8 linhas por 10 plantas, com
-arranjo de plantio de 3 x 3 m e, onde foram mensuradas em todas as
-árvores o diâmetro a 1,3 m, altura total, altura do início da copa e
-atributos qualitativos. A drescição completa pode ser vista na descrição
-do banco de dados em \texttt{?eucalyptus}. A Figura XX mostra o as
-médias das variáveis avaliadas em cada medição nos 4 sítios estudados.
+arranjo de plantio de 3 x 3 m. Foram mensuradas em todas as árvores o
+diâmetro a 1,3 m, altura total, altura do início da copa e atributos
+qualitativos. A descrição completa pode ser vista na descrição do banco
+de dados em \texttt{?eucalyptus}. A Tabela 1 mostra as médias das
+variáveis avaliadas em cada medição nos 4 sítios estudados.
 
 \begin{CodeChunk}
+\begin{table}
 
-\begin{tabular}{r|r|r|r|r|r}
+\caption{\label{tab:euc_medias}Banco de dados *eucalyptus*, médias de diâmetro (dbh), altura (h) e altura do início da copa (cbh) de 7 medições em 4 sítios diferentes.}
+\centering
+\begin{tabular}[t]{l|r|r|r|r|r}
 \hline
 site & area & age & dbh & h & cbh\\
 \hline
-4 & 720 & 15 & 8.6 & 11.4 & 0.8\\
+15 & 720 & 1.2 & 5.9 & 6.9 & 1.5\\
 \hline
-4 & 720 & 21 & 9.9 & 13.5 & 8.9\\
+15 & 720 & 1.7 & 7.6 & 9.8 & 2.9\\
 \hline
-4 & 720 & 27 & 12.4 & 15.0 & 9.6\\
+15 & 720 & 2.3 & 10.3 & 13.4 & 5.2\\
 \hline
-4 & 720 & 33 & 13.0 & 17.7 & 10.1\\
+15 & 720 & 2.7 & 11.1 & 15.9 & 10.1\\
 \hline
-4 & 720 & 39 & 13.6 & 19.5 & 11.5\\
+15 & 720 & 3.2 & 11.9 & 16.5 & 11.9\\
 \hline
-4 & 720 & 45 & 14.1 & 20.9 & 14.5\\
+15 & 720 & 3.8 & 12.6 & 17.2 & 14.5\\
 \hline
-4 & 720 & 51 & 14.6 & 23.7 & 18.4\\
+15 & 720 & 4.2 & 14.0 & 19.3 & 15.0\\
 \hline
-15 & 720 & 14 & 5.9 & 6.9 & 1.5\\
+20 & 720 & 1.2 & 8.6 & 9.5 & 0.5\\
 \hline
-15 & 720 & 20 & 7.6 & 9.8 & 2.9\\
+20 & 720 & 1.7 & 11.1 & 13.6 & 7.0\\
 \hline
-15 & 720 & 27 & 10.3 & 13.4 & 5.2\\
+20 & 720 & 2.3 & 12.5 & 17.3 & 10.2\\
 \hline
-15 & 720 & 31 & 11.1 & 15.9 & 10.1\\
+20 & 720 & 2.7 & 13.1 & 18.2 & 11.2\\
 \hline
-15 & 720 & 38 & 11.9 & 16.5 & 11.9\\
+20 & 720 & 3.2 & 14.4 & 19.1 & 12.6\\
 \hline
-15 & 720 & 43 & 12.6 & 17.2 & 14.5\\
+20 & 720 & 3.8 & 15.2 & 22.5 & 16.9\\
 \hline
-15 & 720 & 50 & 14.0 & 19.3 & 15.0\\
+20 & 720 & 4.2 & 15.7 & 24.0 & 18.2\\
 \hline
-20 & 720 & 14 & 8.6 & 9.5 & 0.5\\
+24 & 720 & 1.2 & 8.4 & 8.5 & 0.5\\
 \hline
-20 & 720 & 20 & 11.1 & 13.6 & 7.0\\
+24 & 720 & 1.7 & 10.9 & 12.5 & 5.1\\
 \hline
-20 & 720 & 26 & 12.5 & 17.3 & 10.2\\
+24 & 720 & 2.3 & 12.6 & 15.4 & 7.9\\
 \hline
-20 & 720 & 31 & 13.1 & 18.2 & 11.2\\
+24 & 720 & 2.7 & 13.3 & 16.7 & 10.4\\
 \hline
-20 & 720 & 37 & 14.4 & 19.1 & 12.6\\
+24 & 720 & 3.2 & 14.7 & 19.4 & 11.5\\
 \hline
-20 & 720 & 47 & 15.2 & 22.5 & 16.9\\
+24 & 720 & 3.8 & 15.6 & 21.7 & 14.4\\
 \hline
-20 & 720 & 50 & 15.7 & 24.0 & 18.2\\
+24 & 720 & 4.2 & 16.6 & 24.3 & 19.9\\
 \hline
-24 & 720 & 15 & 8.4 & 8.5 & 0.5\\
+4 & 720 & 1.2 & 8.6 & 11.4 & 0.8\\
 \hline
-24 & 720 & 21 & 10.9 & 12.5 & 5.1\\
+4 & 720 & 1.7 & 9.9 & 13.5 & 8.9\\
 \hline
-24 & 720 & 27 & 12.6 & 15.4 & 7.9\\
+4 & 720 & 2.3 & 12.4 & 15.0 & 9.6\\
 \hline
-24 & 720 & 33 & 13.3 & 16.7 & 10.4\\
+4 & 720 & 2.7 & 13.0 & 17.7 & 10.1\\
 \hline
-24 & 720 & 40 & 14.7 & 19.4 & 11.5\\
+4 & 720 & 3.2 & 13.6 & 19.5 & 11.5\\
 \hline
-24 & 720 & 45 & 15.6 & 21.7 & 14.4\\
+4 & 720 & 3.8 & 14.1 & 20.9 & 14.5\\
 \hline
-24 & 720 & 52 & 16.6 & 24.3 & 19.9\\
+4 & 720 & 4.2 & 14.6 & 23.7 & 18.4\\
 \hline
 \end{tabular}
+\end{table}
 
 \end{CodeChunk}
 
-Iniciando uma análise exploratória dos dados, podemos ver nas figuras ZZ
-o crescimento em área basal do clone nos 4 sítios. Pode-se notar que o
+Iniciando uma análise exploratória dos dados, podemos ver na Figura 4 o
+crescimento em área basal do clone nos 4 sítios. Pode-se notar que o
 crescimento a taxa de crescimento é semelhante entre os sítios, porém o
 patamar de produção de cada sítio se diferencia, podendo-se destacar o
 sítio 24 como o mais produtivo e o sítio 15 como o menos produtivo até
 os 50 meses de idade.
 
 \begin{CodeChunk}
+\begin{figure}
 
+{\centering \includegraphics{comp3-paper_files/figure-latex/cresc_g-1} 
 
-\begin{center}\includegraphics{comp3-paper_files/figure-latex/unnamed-chunk-8-1} \end{center}
+}
 
+\caption[Área basal em função da idade para os 4 sítios estudados]{Área basal em função da idade para os 4 sítios estudados}\label{fig:cresc_g}
+\end{figure}
 \end{CodeChunk}
 
-Iniciando processamento dos dados para o cálculo dos índices de
-competição, será preciso criar as coordenadas locais para as árvores do
-banco de dados, bem como criar uma faixa de bordadura equivalente a duas
-linhas de plantio e duas plantas, conforme indica a Figura QQ.
+Para o cálculo dos índices de competição, será criada as coordenadas
+locais para as árvores da parcela, bem como uma faixa de bordadura
+equivalente a duas linhas de plantio e duas plantas. O código e Figura
+conforme indica a Figura 5.
 
 \begin{CodeChunk}
 \begin{CodeInput}
@@ -338,20 +332,24 @@ base <- eucalyptus %>%
 \end{CodeChunk}
 
 \begin{CodeChunk}
+\begin{figure}
 
+{\centering \includegraphics{comp3-paper_files/figure-latex/plot_base-1} 
 
-\begin{center}\includegraphics{comp3-paper_files/figure-latex/unnamed-chunk-10-1} \end{center}
+}
 
+\caption[Disposição espacial das árvores na parcela amostral e identificação das árvores úteis e de bordadura]{Disposição espacial das árvores na parcela amostral e identificação das árvores úteis e de bordadura.}\label{fig:plot_base}
+\end{figure}
 \end{CodeChunk}
 
-O cálculo dos índices é aseguir, onde são computados 4 índices
+O cálculo dos índices é feito a seguir, onde são computados 4 índices
 dependentes da distância e 6 índices independentes da distância. Para os
 índices dependentes da distancia foi padronizada seleção de competidores
 pelo crítério das 6 árvores mais próximas da árvore-objeto. Também foi
 calculado o incremento corrente da sessão transversal de cada árvore,
 com o objetivo de correlacioná-la com os índices de competição.
 
-A Figura WW apresenta um gráfico de dispensão do valor calculado para
+A Figura 6 apresenta um gráfico de dispensão do valor calculado para
 cada índice em função do incremento em sessão transversal.Alguns índices
 foram sensíveis às árvores dominadas e tiveram resultados que podem
 prejudicar a relação com o incremento da árvore. Entretando, nesta
@@ -360,10 +358,14 @@ dados, podendo melhorar a visualização após a diferenciação por sítio e
 idade.
 
 \begin{CodeChunk}
+\begin{figure}
 
+{\centering \includegraphics{comp3-paper_files/figure-latex/disp_indices-1} 
 
-\begin{center}\includegraphics{comp3-paper_files/figure-latex/unnamed-chunk-12-1} \end{center}
+}
 
+\caption[Relação do índice calculado em função do incremento em diâmetro]{Relação do índice calculado em função do incremento em diâmetro.}\label{fig:disp_indices}
+\end{figure}
 \end{CodeChunk}
 
 A primeira análise quantitativa será feita atravéz da correlação simples
@@ -372,7 +374,7 @@ competição. A corelação será calculada para cada sitio e idade, para
 ferificar qual índice possui maior consistência de correlação em função
 da idade.
 
-O resultado das correlações estão apresentados na Figura RR. É possível
+O resultado das correlações estão apresentados na Figura 7. É possível
 notar que em determinadas idades, todos os índices tem baixa correlação
 com o incremento em diâmetro, com destaque para as medições referentes
 as idade 33 e 45 meses do sítio 24, onde nenhum índice obteve correlação
@@ -381,10 +383,14 @@ maior que 0,5.
 {[}buscar resultados de outros trabalhos para comparação{]}
 
 \begin{CodeChunk}
+\begin{figure}
 
+{\centering \includegraphics{comp3-paper_files/figure-latex/heatmap_corr-1} 
 
-\begin{center}\includegraphics{comp3-paper_files/figure-latex/unnamed-chunk-14-1} \end{center}
+}
 
+\caption[Correlação linar de Pearson entre o índice de competição e o incremento do diâmetro para cada idade e sítio]{Correlação linar de Pearson entre o índice de competição e o incremento do diâmetro para cada idade e sítio.}\label{fig:heatmap_corr}
+\end{figure}
 \end{CodeChunk}
 
 Será feito uma breve análise dos 4 índices que obtiveram melhores
@@ -403,7 +409,7 @@ base_index_sml %>%
 \end{CodeInput}
 
 
-\begin{center}\includegraphics{comp3-paper_files/figure-latex/unnamed-chunk-16-1} \end{center}
+\begin{center}\includegraphics{comp3-paper_files/figure-latex/disp_steneker-1} \end{center}
 
 \end{CodeChunk}
 
@@ -418,7 +424,7 @@ base_index_sml %>%
 \end{CodeInput}
 
 
-\begin{center}\includegraphics{comp3-paper_files/figure-latex/unnamed-chunk-17-1} \end{center}
+\begin{center}\includegraphics{comp3-paper_files/figure-latex/disp_alemdag-1} \end{center}
 
 \end{CodeChunk}
 
@@ -433,7 +439,7 @@ base_index_sml %>%
 \end{CodeInput}
 
 
-\begin{center}\includegraphics{comp3-paper_files/figure-latex/unnamed-chunk-18-1} \end{center}
+\begin{center}\includegraphics{comp3-paper_files/figure-latex/disp_hamilton-1} \end{center}
 
 \end{CodeChunk}
 
@@ -448,7 +454,7 @@ base_index_sml %>%
 \end{CodeInput}
 
 
-\begin{center}\includegraphics{comp3-paper_files/figure-latex/unnamed-chunk-19-1} \end{center}
+\begin{center}\includegraphics{comp3-paper_files/figure-latex/disp_daniels-1} \end{center}
 
 \end{CodeChunk}
 
